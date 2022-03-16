@@ -1,5 +1,6 @@
 from pydoc import plain
 from tkinter import Tk, Button, Label, Text, Entry, Canvas,  END, DISABLED, NORMAL
+from winsound import PlaySound
 from ChaCha20 import *
 
 # Main window
@@ -13,7 +14,7 @@ Canva = Canvas(base, width=500, height=65, bg='#2a2b2d', highlightthickness=0)
 Canva.place(x=0, y=335)
 
 # GUI version of encrypt and decrypt
-def gui_ChaCha20():
+def gui_ChaCha20(mode):
     # Get text from entry
     # key
     key_ = key.get()
@@ -44,19 +45,25 @@ def gui_ChaCha20():
             aux.append(nonce_[i][j - 2:j])
         nonce_[i] = int("".join(aux), 16)
     # plaintext
-    plaintext_ = plainText.get("1.0", END).strip()
-    plaintext_ = txt_to_bytes(plaintext_)
-    # ciphertext
-    ciphertext_ = chacha20_encrypt(key_, counter_, nonce_, plaintext_)
-    print(ciphertext_)
-    ciphertext_ = bytes_to_txt(ciphertext_)
-    plainText.delete("1.0", END)
-    plainText.insert(END, ciphertext_)
-    cipherText.config(state=NORMAL)
-    cipherText.delete("1.0", END)
-    cipherText.insert(END, ciphertext_)
-    cipherText.config(state=DISABLED)
+    plaintext_ = plainText.get("1.0", END)
+    if(mode):
+        # Encrypt
+        output = chacha20_encrypt(key_, counter_, nonce_, plaintext_)
+        cipherText.config(state=NORMAL)
+        cipherText.delete("1.0", END)
+        cipherText.insert(END, output)
+        cipherText.config(state=DISABLED)
+    else:
+        # Decrypt
+        plaintext_ = plaintext_.split(' ')
+        plaintext_ = [int(i) for i in plaintext_]
+        output = chacha20_decrypt(key_, counter_, nonce_, plaintext_)
+        cipherText.config(state=NORMAL)
+        cipherText.delete("1.0", END)
+        cipherText.insert(END, output)
+        cipherText.config(state=DISABLED)
     return
+
 
 # Clear all blocks
 def clear():
@@ -103,10 +110,14 @@ cipherText = Text(base, width=28, height=6, bg='#2a2b2d', fg='#ffffff', highligh
 cipherText.place(x=260, y=180)
 
 # Buttons
-    # Encrypt/Decrypt by text
-cipher = Button(base, text='Cipher text', command=lambda: gui_ChaCha20())
+    # Encrypt
+cipher = Button(base, text='Cipher text', command=lambda: gui_ChaCha20(True))
 cipher.place(x=30, y=355)
 cipher.configure(background='#04BF68', foreground='#155939', borderwidth=0, activebackground='#232426', pady=5, padx=10)
+    # Decrypt
+decipher = Button(base, text='Decipher text', command=lambda: gui_ChaCha20(False))
+decipher.place(x=130, y=355)
+decipher.configure(background='#04BF68', foreground='#155939', borderwidth=0, activebackground='#232426', pady=5, padx=10)
     # Clear
 Clear = Button(base, text='Clear', command=lambda: clear())
 Clear.place(x=410, y=355)

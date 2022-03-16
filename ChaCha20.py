@@ -1,5 +1,3 @@
-from conversor import txt_to_bytes, bytes_to_txt
-
 ROUND = 20
 CHACHA20K = [0x61707865, 0x3320646e, 0x79622d32, 0x6b206574]
 
@@ -38,7 +36,6 @@ def inner_block(state):
 
 # Chacha20 block
 def chacha20_block(S, output=False):
-    X = []
     X = S[:]
     for i in range(0, ROUND, 2):
         X = inner_block(X)
@@ -65,15 +62,43 @@ def chacha20_encrypt(key, counter, nonce, plaintext, output=False):
     for i in range(3):
         S.append(nonce[i])
     # Encryption
+    S = chacha20_block(S, output)
+    cipher = ["{:08x}".format(S[i]) for i in range(16)]
+    cipher = "".join(cipher)
+    temp = []
+    for i in range(0, len(cipher), 2):
+        temp.append(cipher[i:i+2])
+    temp = [int(i, 16) for i in temp]
+    if type(plaintext) == str:
+        plaintext = plaintext.encode()
     ciphertext = []
-    for i in range(0, len(plaintext), 64):
-        S = chacha20_block(S, output)
-        for j in range(64):
-            if i + j >= len(plaintext):
-                break
-            ciphertext.append((plaintext[i + j] ^ S[j]) & 0xffffffff)
+    for i in range(len(plaintext)):
+        ciphertext.append(plaintext[i] ^ temp[i % len(temp)])
     return ciphertext
 
+def chacha20_decrypt(key, counter, nonce, ciphertext, output=False):
+    # Initialization
+    S = []
+    for i in range(4):
+        S.append(CHACHA20K[i])
+    for i in range(8):
+        S.append(key[i])
+    S.append(counter)
+    for i in range(3):
+        S.append(nonce[i])
+    # Encryption
+    S = chacha20_block(S, output)
+    cipher = ["{:08x}".format(S[i]) for i in range(16)]
+    cipher = "".join(cipher)
+    temp = []
+    for i in range(0, len(cipher), 2):
+        temp.append(cipher[i:i+2])
+    temp = [int(i, 16) for i in temp]
+    for i in range(len(ciphertext)):
+        ciphertext[i] = ciphertext[i] ^ temp[i % len(temp)]
+        ciphertext[i] = chr(ciphertext[i])
+    ciphertext = "".join(ciphertext)
+    return ciphertext
 
 def main():
 
@@ -114,8 +139,6 @@ def main():
             for j in range(8, 0, -2):
                 aux.append(nonce[i][j - 2:j])
             nonce[i] = int("".join(aux), 16)
-
-
     
     
     S = [   CHACHA20K[0], CHACHA20K[1], CHACHA20K[2], CHACHA20K[3],
@@ -123,43 +146,27 @@ def main():
             key[4], key[5], key[6], key[7],
             count, nonce[0], nonce[1], nonce[2]
         ]
+
     print("\n\nEstado inicial:")
     for i in range(16):
         if i == 4 or i == 8 or i == 12:
             print()
         print("{:08x}".format(S[i]), end=" ")
+    
     Sol = chacha20_block(S, True)
+
     print("\n\nSolucion:")
     for i in range(16):
         if i == 4 or i == 8 or i == 12:
             print()
         print("{:08x}".format(Sol[i]), end=" ")
-    
-    # Input plaintext
-    plaintext = input("\n\nIntroduce el texto plano: ")
-    # Convert text to bytes in hexadecimal
-    plaintext = txt_to_bytes(plaintext)
-    # Encrypt
-    cipherbytes = chacha20_encrypt(key, count, nonce, plaintext)
-    # Convert hexadecimal to text
-    ciphertext = ''.join(["{:02x}".format(x) for x in cipherbytes])
-    # Print ciphertext in hexadecimal 
-    outcipher = ""
-    for i in range(0, len(ciphertext) - 8, 8):
-        outcipher += ciphertext[i:i+8] + ":"
-    outcipher += ciphertext[len(ciphertext) - 8:]
-    print("\n\nCifrado:")
-    print(outcipher)
-    print(cipherbytes)
-    # Decrypt
-    plainbytes = chacha20_encrypt(key, count, nonce, cipherbytes)
-    # Convert bytes in hexadecimal
-    plaintext = bytes_to_txt(plainbytes)
-    # Convert hexadecimal to text
-    # Print plaintext
-    print("\n\nTexto plano:")
-    print(plaintext)
-    print(plainbytes)
+
+    plaintext = input("\n\nIntroduce el texto a cifrar: ")
+    ciphertext = chacha20_encrypt(key, count, nonce, plaintext)
+    print(ciphertext)
+    ciphertext = chacha20_decrypt(key, count, nonce, ciphertext)
+    print(ciphertext)
+
 
 if __name__ == "__main__":
     main()
